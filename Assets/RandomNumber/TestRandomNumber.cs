@@ -50,8 +50,8 @@ public unsafe class TestRandomNumber : MonoBehaviour
         // i++;
         
         // float next = BurstMath.RandomWithMinMax(ref seed, 0, 100000);
-        float next = BurstMath.RandomWithMinMax(0, 100000);
-        string str = string.Format("burstMath {0,-5}", next);
-        Debug.Log(str);
+        // float next = BurstMath.RandomWithMinMax(0, 100000);
+        // string str = string.Format("burstMath {0,-5}", next);
+        // Debug.Log(str);
     }
 }

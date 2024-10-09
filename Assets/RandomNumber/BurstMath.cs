@@ -10,7 +10,7 @@ namespace RandomNumber
         public Random* Ptr;
     }
 
-    [BurstCompile]
+    // [BurstCompile]
     public unsafe static class BurstMath
     {
         public static readonly RandomPtr RandomPtr = NewRandomPtr();
@@ -26,7 +26,7 @@ namespace RandomNumber
 
         // private static readonly RandR RandR = new RandR(1000);
         
-        [BurstCompile]
+        // [BurstCompile]
         public static float RandomWithMinMax(ref uint seed, float min, float max)
         {
             Random r = new Random(seed);
@@ -36,7 +36,7 @@ namespace RandomNumber
             return min + (max - min) * result;
         }
         
-        [BurstCompile]
+        // [BurstCompile]
         public static float RandomWithMinMax(float min, float max)
         {
             int m = 1000000;

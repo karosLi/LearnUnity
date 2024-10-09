@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -12,8 +13,10 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using Unity.Jobs;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Events;
+using Debug = UnityEngine.Debug;
 
 public struct MoveComponent : IComponentData
 {
@@ -31,8 +34,14 @@ public unsafe class TestNatvieContainer : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        TestMultipleHashMap();
-        return;
+        // TestCircularDisposeList();
+        // return;
+        
+        // TestLinkedList();
+        // return;
+        
+        // TestMultipleHashMap();
+        // return;
         
         // TestCircularList();
         // return;
@@ -187,9 +196,25 @@ public unsafe class TestNatvieContainer : MonoBehaviour
         
     }
 
+    void TestLinkedList()
+    {
+        NativeLinkedList<int> list = new NativeLinkedList<int>(1, Allocator.Temp);
+        
+        for (int i = 0; i < 20; i++)
+        {
+            list.InsertAfter(list.Tail, i);
+            for (int j = 0; j < list.Length; j++)
+            {
+                IntPtr pointer = new IntPtr(UnsafeUtility.AddressOf(ref list.ElementAt(j)));
+                Debug.Log(list[j] + " " + pointer);
+            }
+        }
+    }
+
     void TestChunkList()
     {
-        NativeChunkedList<int> list = new NativeChunkedList<int>();
+        
+        NativeChunkedList<int> list = new NativeChunkedList<int>(10, 100, Allocator.Temp);
         // list.ad
     }
 
@@ -209,6 +234,52 @@ public unsafe class TestNatvieContainer : MonoBehaviour
         {
             Debug.Log("TestMultipleHashMap " + value);
         }
+    }
+
+    void TestCircularDisposeList()
+    {
+        NativeCircularDisposeList<NodePtr> list = new NativeCircularDisposeList<NodePtr>(20, Allocator.Persistent);
+        for (int i = 0; i < 20; i++)
+        {
+            list.Add(NodePtr.CreateNodePtr(Allocator.Persistent, i));
+        }
+        
+        for (int j = 0; j < list.Length; j++)
+        {
+            IntPtr pointer = new IntPtr(list[j].Ptr);
+            Debug.Log(list[j].Ptr->Value + " " + pointer);
+        }
+        
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 5; i++)
+        {
+            sb.Clear();
+            var tail = list[list.Length - 1];
+            list.RemoveTail(false);
+            var head = list[0];
+            var tail1 = list[list.Length - 2];
+            list.AddHead(tail);
+            
+            foreach (var a in list)
+            {
+                IntPtr pointer = new IntPtr(a.Ptr);
+                sb.Append($"{a.Ptr->Value} {pointer} ");
+            }
+            Debug.Log($"==== {sb.ToString()}");
+        }
+        
+        sb.Clear();
+        for (int i = 20; i < 25; i++)
+        {
+            list.Add(NodePtr.CreateNodePtr(Allocator.Persistent, i));
+        }
+        foreach (var a in list)
+        {
+            IntPtr pointer = new IntPtr(a.Ptr);
+            sb.Append($"{a.Ptr->Value} {pointer} ");
+        }
+        Debug.Log($"==== {sb.ToString()}");
+        list.Dispose();
     }
 
     void TestCircularList()

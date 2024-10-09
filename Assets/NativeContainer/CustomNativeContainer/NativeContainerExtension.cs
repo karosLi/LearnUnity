@@ -26,5 +26,10 @@ namespace NativeContainer
                 }
             }
         }
+
+        public static void Dispose(this int value)
+        {
+            
+        }
     }
 }

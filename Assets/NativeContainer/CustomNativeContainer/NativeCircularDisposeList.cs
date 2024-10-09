@@ -17,7 +17,7 @@ namespace NativeContainer
     /// An indexable collection.
     /// </summary>
     /// <typeparam name="T">The type of the elements in the collection.</typeparam>
-    public interface INativeCircularListIndexable<T> where T : struct
+    public interface INativeCircularDisposeListIndexable<T> where T : struct,IDisposable
     {
         /// <summary>
         /// The current number of elements in the collection.
@@ -37,7 +37,7 @@ namespace NativeContainer
     /// A resizable list.
     /// </summary>
     /// <typeparam name="T">The type of the elements.</typeparam>
-    public interface INativeCircularList<T> : INativeCircularListIndexable<T> where T : struct
+    public interface INativeCircularDisposeList<T> : INativeCircularListIndexable<T> where T : struct,IDisposable
     {
         /// <summary>
         /// The number of elements that fit in the current allocation.
@@ -81,12 +81,12 @@ namespace NativeContainer
     [StructLayout(LayoutKind.Sequential)]
     [NativeContainer]
     [DebuggerDisplay("Length = {Length}")]
-    [DebuggerTypeProxy(typeof(NativeCircularListDebugView<>))]
-    public unsafe struct NativeCircularList<T> 
+    [DebuggerTypeProxy(typeof(NativeCircularDisposeListDebugView<>))]
+    public unsafe struct NativeCircularDisposeList<T> 
         : INativeDisposable
         , INativeCircularList<T>
         , IEnumerable<T> // Used by collection initializers.
-        where T : unmanaged
+        where T : unmanaged,IDisposable
     {
         // Raw pointers aren't usually allowed inside structures that are passed to jobs, but because it's protected
         // with the safety system, you can disable that restriction for it
@@ -114,7 +114,7 @@ namespace NativeContainer
         /// Initializes and returns a NativeCircularList with a capacity of one.
         /// </summary>
         /// <param name="allocator">The allocator to use.</param>
-        public NativeCircularList(Allocator allocator)
+        public NativeCircularDisposeList(Allocator allocator)
             : this(1, allocator)
         {
         }
@@ -124,7 +124,7 @@ namespace NativeContainer
         /// </summary>
         /// <param name="initialCapacity">The initial capacity of the list.</param>
         /// <param name="allocator">The allocator to use.</param>
-        public NativeCircularList(int initialCapacity, Allocator allocator)
+        public NativeCircularDisposeList(int initialCapacity, Allocator allocator)
         {
             this = default;
             Initialize(initialCapacity, allocator);
@@ -267,7 +267,7 @@ namespace NativeContainer
         /// <remarks>
         /// Length is decremented by 1.
         /// </remarks>
-        public void RemoveTail()
+        public void RemoveTail(bool dispose = true)
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckWriteAndBumpSecondaryVersion(m_Safety);
@@ -275,6 +275,11 @@ namespace NativeContainer
             if (m_Length.Value == 0)
             {
                 return;
+            }
+
+            if (dispose)
+            {
+                this[m_Tail.Value].Dispose(); 
             }
             m_Tail.Value = (m_Tail.Value + m_Capacity.Value - 1) % m_Capacity.Value;
             m_Length.Value -= 1;
@@ -305,7 +310,7 @@ namespace NativeContainer
         /// <remarks>
         /// Length is decremented by 1.
         /// </remarks>
-        public void RemoveHead()
+        public void RemoveHead(bool dispose = true)
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckWriteAndBumpSecondaryVersion(m_Safety);
@@ -314,6 +319,12 @@ namespace NativeContainer
             {
                 return;
             }
+
+            if (dispose)
+            {
+                this[m_Head.Value].Dispose();
+            }
+            
             m_Head.Value = (m_Head.Value + 1) % m_Capacity.Value;
             m_Length.Value -= 1;
         }
@@ -352,6 +363,16 @@ namespace NativeContainer
         /// </summary>
         public void Dispose()
         {
+            for (int i = 0; i < m_Length.Value; i++)
+            {
+                this[i].Dispose();
+            }
+            
+            m_Head.Dispose();
+            m_Tail.Dispose();
+            m_Length.Dispose();
+            m_Capacity.Dispose();
+            
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckDeallocateAndThrow(m_Safety);
             AtomicSafetyHandle.Release(m_Safety);
@@ -359,11 +380,6 @@ namespace NativeContainer
             // Free the buffer
             UnsafeUtility.FreeTracked(m_Buffer, m_AllocatorLabel);
             m_Buffer = null;
-            
-            m_Head.Dispose();
-            m_Tail.Dispose();
-            m_Length.Dispose();
-            m_Capacity.Dispose();
         }
         
         /// <summary>
@@ -375,7 +391,7 @@ namespace NativeContainer
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckDeallocateAndThrow(m_Safety);
-            var jobHandle = new NativeCircularListDisposeJob { Data = new NativeCircularListDispose { m_Buffer = m_Buffer, m_AllocatorLabel = m_AllocatorLabel, m_Safety = m_Safety } }.Schedule(inputDeps);
+            var jobHandle = new NativeCircularDisposeListDisposeJob { Data = new NativeCircularDisposeListDispose { m_Buffer = m_Buffer, m_AllocatorLabel = m_AllocatorLabel, m_Safety = m_Safety } }.Schedule(inputDeps);
             AtomicSafetyHandle.Release(m_Safety);
 #else
             var jobHandle = new NativeCircularListDisposeJob { Data = new NativeCircularListDispose { m_Buffer = m_Buffer, m_AllocatorLabel = m_AllocatorLabel } }.Schedule(inputDeps);
@@ -393,6 +409,12 @@ namespace NativeContainer
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckWriteAndBumpSecondaryVersion(m_Safety);
 #endif
+            
+            for (int i = 0; i < m_Length.Value; i++)
+            {
+                this[i].Dispose();
+            }
+            
             m_Head.Value = 0;
             m_Tail.Value = 0;
             m_Length.Value = 0;
@@ -477,13 +499,13 @@ namespace NativeContainer
         [ExcludeFromDocs]
         public struct Enumerator : IEnumerator<T>, IEnumerator, IDisposable
         {
-            private NativeCircularList<T> m_list;
+            private NativeCircularDisposeList<T> m_list;
             private int m_Head;
             private int m_Tail;
             private int m_Index;
             private T value;
 
-            public Enumerator(ref NativeCircularList<T> list)
+            public Enumerator(ref NativeCircularDisposeList<T> list)
             {
                 this.m_list = list;
                 this.m_Index = -1;
@@ -528,7 +550,7 @@ namespace NativeContainer
     }
     
     [NativeContainer]
-    internal unsafe struct NativeCircularListDispose
+    internal unsafe struct NativeCircularDisposeListDispose
     {
         [NativeDisableUnsafePtrRestriction]
         public void* m_Buffer;
@@ -545,9 +567,9 @@ namespace NativeContainer
     }
 
     [BurstCompile]
-    internal unsafe struct NativeCircularListDisposeJob : IJob
+    internal unsafe struct NativeCircularDisposeListDisposeJob : IJob
     {
-        internal NativeCircularListDispose Data;
+        internal NativeCircularDisposeListDispose Data;
 
         public void Execute()
         {
@@ -555,11 +577,11 @@ namespace NativeContainer
         }
     }
     
-    public sealed class NativeCircularListDebugView<T> where T : unmanaged
+    public sealed class NativeCircularDisposeListDebugView<T> where T : unmanaged,IDisposable
     {
-        NativeCircularList<T> m_List;
+        NativeCircularDisposeList<T> m_List;
 
-        public NativeCircularListDebugView(NativeCircularList<T> list)
+        public NativeCircularDisposeListDebugView(NativeCircularDisposeList<T> list)
         {
             m_List = list;
         }
