@@ -91,12 +91,7 @@ namespace NativeContainer
         // Raw pointers aren't usually allowed inside structures that are passed to jobs, but because it's protected
         // with the safety system, you can disable that restriction for it
         [NativeDisableUnsafePtrRestriction]
-        internal void* m_Buffer;
-        internal Allocator m_AllocatorLabel;
-        internal NativeReference<int> m_Head;
-        internal NativeReference<int> m_Tail;
-        internal NativeReference<int> m_Length;
-        internal NativeReference<int> m_Capacity;
+        internal UnsafeCircularList<T>* m_ListData;
         
         // You should only declare and use safety system members with the ENABLE_UNITY_COLLECTIONS_CHECKS define.
         // In final builds of projects, the safety system is disabled for performance reasons, so these APIs aren't
@@ -132,17 +127,10 @@ namespace NativeContainer
         
         internal void Initialize(int initialCapacity, Allocator allocator)
         {
-            m_Head = new NativeReference<int>(allocator);
-            m_Tail = new NativeReference<int>(allocator);
-            m_Length = new NativeReference<int>(allocator);
-            m_Capacity = new NativeReference<int>(math.max(initialCapacity, 1), allocator);
-            m_AllocatorLabel = allocator;
-            
-            var totalSize = sizeof(T) * (long)m_Capacity.Value;
-            m_Buffer = UnsafeUtility.MallocTracked(totalSize, UnsafeUtility.AlignOf<T>(), m_AllocatorLabel, 1);
+            var totalSize = sizeof(T) * (long)initialCapacity;
             
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
-            CheckTotalSize(m_Capacity.Value, totalSize);
+            CheckTotalSize(initialCapacity, totalSize);
             
             // Create the AtomicSafetyHandle and DisposeSentinel
             m_Safety = AtomicSafetyHandle.Create();
@@ -152,11 +140,9 @@ namespace NativeContainer
         
             // Automatically bump the secondary version any time this container is scheduled for writing in a job
             AtomicSafetyHandle.SetBumpSecondaryVersionOnScheduleWrite(m_Safety, true);
-
-            // Check if this is a nested container, and if so, set the nested container flag
-            if (UnsafeUtility.IsNativeContainerType<T>()) 
-                AtomicSafetyHandle.SetNestedContainer(m_Safety, true);
+            
 #endif
+            m_ListData = UnsafeCircularList<T>.Create(initialCapacity, allocator);
         }
         
         /// <summary>
@@ -172,18 +158,15 @@ namespace NativeContainer
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
                 AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
 #endif
-                CheckIndexInRange(index, Length);
                 // Read from the buffer and return the value
-                return UnsafeUtility.ReadArrayElement<T>(m_Buffer, (m_Head.Value + index) % m_Capacity.Value);
+                return (*m_ListData)[index];
             }
             set
             {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
                 AtomicSafetyHandle.CheckWriteAndThrow(m_Safety);
 #endif
-                CheckIndexInRange(index, Length);
-                // Write the value into the buffer
-                UnsafeUtility.WriteArrayElement(m_Buffer, (m_Head.Value + index) % m_Capacity.Value, value);
+                (*m_ListData)[index] = value;
             }
         }
 
@@ -198,8 +181,7 @@ namespace NativeContainer
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckWriteAndThrow(m_Safety);
 #endif
-            CheckIndexInRange(index, Length);
-            return ref UnsafeUtility.ArrayElementAsRef<T>(m_Buffer, (m_Head.Value + index) % m_Capacity.Value);
+            return ref m_ListData->ElementAt(index);
         }
 
         /// <summary>
@@ -214,7 +196,7 @@ namespace NativeContainer
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
                 AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
 #endif
-                return m_Length.Value;
+                return m_ListData->Length;
             }
         }
 
@@ -231,7 +213,7 @@ namespace NativeContainer
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
                 AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
 #endif
-                return m_Capacity.Value;
+                return m_ListData->Capacity;
             }
 
             set
@@ -239,7 +221,7 @@ namespace NativeContainer
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
                 AtomicSafetyHandle.CheckWriteAndBumpSecondaryVersion(m_Safety);
 #endif
-                SetCapacity(value);
+                m_ListData->Capacity = value;
             }
         }
         
@@ -255,10 +237,7 @@ namespace NativeContainer
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckWriteAndBumpSecondaryVersion(m_Safety);
 #endif
-            CheckCapacity();
-            UnsafeUtility.WriteArrayElement(m_Buffer, m_Tail.Value, value);
-            m_Tail.Value = (m_Tail.Value + 1) % m_Capacity.Value;
-            m_Length.Value += 1;
+            m_ListData->Add(value);
         }
         
         /// <summary>
@@ -272,12 +251,7 @@ namespace NativeContainer
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckWriteAndBumpSecondaryVersion(m_Safety);
 #endif
-            if (m_Length.Value == 0)
-            {
-                return;
-            }
-            m_Tail.Value = (m_Tail.Value + m_Capacity.Value - 1) % m_Capacity.Value;
-            m_Length.Value -= 1;
+            m_ListData->RemoveTail();
         }
         
         /// <summary>
@@ -292,11 +266,7 @@ namespace NativeContainer
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckWriteAndBumpSecondaryVersion(m_Safety);
 #endif
-            CheckCapacity();
-            // Calculate new head position
-            m_Head.Value = (m_Head.Value - 1 + m_Capacity.Value) % m_Capacity.Value;
-            UnsafeUtility.WriteArrayElement(m_Buffer, m_Head.Value, value);
-            m_Length.Value += 1;
+            m_ListData->AddHead(value);
         }
 
         /// <summary>
@@ -310,42 +280,26 @@ namespace NativeContainer
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckWriteAndBumpSecondaryVersion(m_Safety);
 #endif
-            if (m_Length.Value == 0)
-            {
-                return;
-            }
-            m_Head.Value = (m_Head.Value + 1) % m_Capacity.Value;
-            m_Length.Value -= 1;
+            m_ListData->RemoveHead();
         }
         
-        /// <summary>
-        /// Handles capacity increase by expanding the internal array and rearranging elements.
-        /// </summary>
-        private void CheckCapacity()
-        {
-            if (m_Length.Value == m_Capacity.Value)
-            {
-                Realloc(m_Capacity.Value * 2);
-            }
-        }
-
         /// <summary>
         /// Whether this list is full.
         /// </summary>
         /// <value>True if this list is empty.</value>
-        public bool IsFull => m_Length == m_Capacity;
+        public bool IsFull => m_ListData->IsFull;
         
         /// <summary>
         /// Whether this list is empty.
         /// </summary>
         /// <value>True if the list is empty or if the list has not been constructed.</value>
-        public bool IsEmpty => !IsCreated || m_Length.Value == 0;
+        public bool IsEmpty => m_ListData == null || m_ListData->Length == 0;
 
         /// <summary>
         /// Whether this list has been allocated (and not yet deallocated).
         /// </summary>
         /// <value>True if this list has been allocated (and not yet deallocated).</value>
-        public bool IsCreated => m_Buffer != null;
+        public bool IsCreated => m_ListData != null;
         
         /// <summary>
         /// Releases all resources (memory and safety handles).
@@ -353,17 +307,42 @@ namespace NativeContainer
         public void Dispose()
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
-            AtomicSafetyHandle.CheckDeallocateAndThrow(m_Safety);
-            AtomicSafetyHandle.Release(m_Safety);
+            if (!AtomicSafetyHandle.IsDefaultValue(m_Safety))
+            {
+                AtomicSafetyHandle.CheckExistsAndThrow(m_Safety);
+            }
 #endif
-            // Free the buffer
-            UnsafeUtility.FreeTracked(m_Buffer, m_AllocatorLabel);
-            m_Buffer = null;
+            if (!IsCreated)
+            {
+                return;
+            }
+
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+            CollectionHelper.DisposeSafetyHandle(ref m_Safety);
+#endif
             
-            m_Head.Dispose();
-            m_Tail.Dispose();
-            m_Length.Dispose();
-            m_Capacity.Dispose();
+            UnsafeCircularList<T>.Destroy(m_ListData);
+            m_ListData = null;
+        }
+        
+        internal void Dispose(Allocator allocator)
+        {
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+            if (!AtomicSafetyHandle.IsDefaultValue(m_Safety))
+            {
+                AtomicSafetyHandle.CheckExistsAndThrow(m_Safety);
+            }
+#endif
+            if (!IsCreated)
+            {
+                return;
+            }
+
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+            CollectionHelper.DisposeSafetyHandle(ref m_Safety);
+#endif
+            UnsafeCircularList<T>.Destroy(m_ListData);
+            m_ListData = null;
         }
         
         /// <summary>
@@ -374,17 +353,24 @@ namespace NativeContainer
         public JobHandle Dispose(JobHandle inputDeps)
         {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
-            AtomicSafetyHandle.CheckDeallocateAndThrow(m_Safety);
-            var jobHandle = new NativeCircularListDisposeJob { Data = new NativeCircularListDispose { m_Buffer = m_Buffer, m_AllocatorLabel = m_AllocatorLabel, m_Safety = m_Safety } }.Schedule(inputDeps);
+            if (!AtomicSafetyHandle.IsDefaultValue(m_Safety))
+            {
+                AtomicSafetyHandle.CheckExistsAndThrow(m_Safety);
+            }
+#endif
+            if (!IsCreated)
+            {
+                return inputDeps;
+            }
+
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+            var jobHandle = new NativeCircularListDisposeJob { Data = new NativeCircularListDispose { m_ListData = m_ListData, m_AllocatorLabel = m_ListData->m_AllocatorLabel, m_Safety = m_Safety } }.Schedule(inputDeps);
             AtomicSafetyHandle.Release(m_Safety);
 #else
-            var jobHandle = new NativeCircularListDisposeJob { Data = new NativeCircularListDispose { m_Buffer = m_Buffer, m_AllocatorLabel = m_AllocatorLabel } }.Schedule(inputDeps);
+            var jobHandle = new NativeCircularListDisposeJob { Data = new NativeCircularListDispose { m_ListData = m_ListData, m_AllocatorLabel = m_ListData->m_AllocatorLabel } }.Schedule(inputDeps);
 #endif
-            m_Buffer = null;
-            m_Head.Dispose();
-            m_Tail.Dispose();
-            m_Length.Dispose();
-            m_Capacity.Dispose();
+            m_ListData = null;
+
             return jobHandle;
         }
 
@@ -393,64 +379,17 @@ namespace NativeContainer
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
             AtomicSafetyHandle.CheckWriteAndBumpSecondaryVersion(m_Safety);
 #endif
-            m_Head.Value = 0;
-            m_Tail.Value = 0;
-            m_Length.Value = 0;
+            m_ListData->Clear();
         }
 
         public IEnumerator<T> GetEnumerator()
         {
-            return new Enumerator(ref this);
+            return m_ListData->GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
-        }
-        
-        /// <summary>
-        /// Sets the capacity.
-        /// </summary>
-        /// <param name="capacity">The new capacity.</param>
-        void SetCapacity(int capacity)
-        {
-            var sizeOf = sizeof(T);
-            var newCapacity = math.max(capacity, 64 / sizeOf);
-            newCapacity = math.ceilpow2(newCapacity);
-            
-            Realloc(newCapacity);
-        }
-        
-        void Realloc(int newCapacity)
-        {
-            if (newCapacity > 0 && newCapacity > m_Capacity.Value)
-            {
-                var totalSize = sizeof(T) * (long)newCapacity;
-                void* newBuffer = UnsafeUtility.MallocTracked(totalSize, UnsafeUtility.AlignOf<T>(), m_AllocatorLabel, 1);
-                void* sourcePtr = m_Buffer;
-                void* destPtr = newBuffer;
-
-                // 如果数组没有回绕
-                if (m_Head.Value < m_Tail.Value)
-                {
-                    int sizeInBytes = UnsafeUtility.SizeOf<T>() * m_Length.Value;
-                    UnsafeUtility.MemCpy((byte*)destPtr, (byte*)sourcePtr + m_Head.Value * UnsafeUtility.SizeOf<T>(), sizeInBytes);
-                }
-                else
-                {
-                    // 复制head到数组末尾的部分
-                    int firstPartSize = (m_Capacity.Value - m_Head.Value) * UnsafeUtility.SizeOf<T>();
-                    UnsafeUtility.MemCpy((byte*)destPtr, (byte*)sourcePtr + m_Head.Value * UnsafeUtility.SizeOf<T>(), firstPartSize);
-                    // 复制从0到tail的部分
-                    UnsafeUtility.MemCpy((byte*)destPtr + firstPartSize, (byte*)sourcePtr, m_Tail.Value * UnsafeUtility.SizeOf<T>());
-                }
-                
-                UnsafeUtility.FreeTracked(sourcePtr, m_AllocatorLabel);
-                m_Buffer = newBuffer;
-                m_Capacity.Value = newCapacity;
-                m_Head.Value = 0;
-                m_Tail.Value = m_Length.Value;
-            }
         }
         
         [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
@@ -462,76 +401,13 @@ namespace NativeContainer
             if (totalSize > int.MaxValue)
                 throw new ArgumentOutOfRangeException(nameof(initialCapacity), $"Capacity * sizeof(T) cannot exceed {int.MaxValue} bytes");
         }
-
-        [Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
-        static void CheckIndexInRange(int value, int length)
-        {
-            if (value < 0)
-                throw new IndexOutOfRangeException($"Value {value} must be positive.");
-
-            if ((uint)value >= (uint)length)
-                throw new IndexOutOfRangeException(
-                    $"Value {value} is out of range in NativeCircularList of '{length}' Length.");
-        }
-
-        [ExcludeFromDocs]
-        public struct Enumerator : IEnumerator<T>, IEnumerator, IDisposable
-        {
-            private NativeCircularList<T> m_list;
-            private int m_Head;
-            private int m_Tail;
-            private int m_Index;
-            private T value;
-
-            public Enumerator(ref NativeCircularList<T> list)
-            {
-                this.m_list = list;
-                this.m_Index = -1;
-                this.m_Head = list.m_Head.Value;
-                this.m_Tail = list.m_Tail.Value;
-                this.value = default (T);
-            }
-
-            public void Dispose()
-            {
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe bool MoveNext()
-            {
-                ++this.m_Index;
-                if (this.m_Index < this.m_list.m_Length.Value)
-                {
-#if ENABLE_UNITY_COLLECTIONS_CHECKS
-                    AtomicSafetyHandle.CheckReadAndThrow(this.m_list.m_Safety);
-#endif
-                    int index = (m_Head + m_Index) % m_list.m_Capacity.Value;
-                    this.value = UnsafeUtility.ReadArrayElement<T>(this.m_list.m_Buffer, index);
-                    return true;
-                }
-                this.value = default (T);
-                return false;
-            }
-
-            public void Reset() => this.m_Index = -1;
-
-            public T Current
-            {
-                [MethodImpl(MethodImplOptions.AggressiveInlining)] get => this.value;
-            }
-
-            object IEnumerator.Current
-            {
-                [MethodImpl(MethodImplOptions.AggressiveInlining)] get => (object) this.Current;
-            }
-        }
     }
     
     [NativeContainer]
     internal unsafe struct NativeCircularListDispose
     {
         [NativeDisableUnsafePtrRestriction]
-        public void* m_Buffer;
+        public void* m_ListData;
         public Allocator m_AllocatorLabel;
 
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
@@ -540,7 +416,7 @@ namespace NativeContainer
 
         public void Dispose()
         {
-            UnsafeUtility.FreeTracked(m_Buffer, m_AllocatorLabel);
+            UnsafeUtility.FreeTracked(m_ListData, m_AllocatorLabel);
         }
     }
 
@@ -548,6 +424,10 @@ namespace NativeContainer
     internal unsafe struct NativeCircularListDisposeJob : IJob
     {
         internal NativeCircularListDispose Data;
+        
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+        internal AtomicSafetyHandle m_Safety;
+#endif
 
         public void Execute()
         {
