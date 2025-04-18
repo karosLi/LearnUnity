@@ -5,6 +5,7 @@ using LibBase.MathLite;
 using RandomNumber;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Mathematics;
+using UnityEditor;
 using UnityEngine;
 using Random = System.Random;
 
@@ -45,13 +46,28 @@ public unsafe class TestRandomNumber : MonoBehaviour
         //     x = ((int)0xadb4a92d * x) + 9999999;
         // }
         //
-        // var next = _randR.Next();
-        // Debug.Log(next + " " + i + "  UnityEngine.Random");
-        // i++;
         
         // float next = BurstMath.RandomWithMinMax(ref seed, 0, 100000);
         // float next = BurstMath.RandomWithMinMax(0, 100000);
         // string str = string.Format("burstMath {0,-5}", next);
         // Debug.Log(str);
+        
+        var next = _randR.Next();
+        Debug.Log(next + " " + i + "  TestRandR");
+        i++;
+    }
+
+    [MenuItem("Test/Random/TestRandR")]
+    public static void TestRandR()
+    {
+        // Editor 运行结果和场景里运行不一样，随机数还是要以运行时为准
+        RandR randR = new RandR(1000);
+
+        for (int i = 0; i < 100000; i++)
+        {
+            var next = randR.Arc4Random();
+            Debug.Log(next + " " + i);
+            i++;
+        }
     }
 }

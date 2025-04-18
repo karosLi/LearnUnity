@@ -56,7 +56,7 @@ namespace LibBase.Utils
             {
                 FandTimes = 0;
                 FandSeed = seed;
-                RandR.seed = seed;
+                RandR.Seed = seed;
             }
         }
 
