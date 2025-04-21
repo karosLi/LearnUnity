@@ -24,6 +24,7 @@ public class TestDoubleDecimal : MonoBehaviour
 
     void Test()
     {
+        // 原生和unity都使用定点数，可以确保基础计算和三角函数计算都是准确的
         MathUtils.SRand(2000);
         
         StringBuilder str = new StringBuilder();
@@ -89,6 +90,7 @@ public class TestDoubleDecimal : MonoBehaviour
         //         ConvertFloatToString(totalFloat), ConvertFloatToString(cos), ConvertFloatToString(sin), ConvertFloatToString(tan), ConvertFloatToString(atan2));
         // }
         
+        // OpenLibmInterop 只能确保三角函数运算公式一样，不能确保 double 本身相乘的计算结果和原生一致
         // for (int i = 0; i < 5000; i++)
         // {
         //     int fand = MathUtils.Arc4Random();
@@ -124,8 +126,11 @@ public class TestDoubleDecimal : MonoBehaviour
             }
             
             // Use string interpolation for formatting
-            str.AppendFormat("f:{0,-15} cos:{1,-15} sin:{2,-15} atan2:{3,-15} \n",
-                ConvertFloatToString(totalFixFloat), ConvertFloatToString(cos), ConvertFloatToString(sin), ConvertFloatToString(atan2));
+            // str.AppendFormat("f:{0,-15} cos:{1,-15} sin:{2,-15} atan2:{3,-15} \n",
+            //     ConvertFloatToString(totalFixFloat), ConvertFloatToString(cos), ConvertFloatToString(sin), ConvertFloatToString(atan2));
+            
+            str.AppendFormat("f:{0,-20} cos:{1,-20} sin:{2,-20} atan2:{3,-20} \n",
+                totalFixFloat.RawValue, cos.RawValue, sin.RawValue, atan2.RawValue);
         }
 
         Debug.Log(str.ToString());
@@ -190,31 +195,27 @@ public class TestDoubleDecimal : MonoBehaviour
 }
 
 // iOS 测试代码
+// #import "FixFloatTable.h"
+// #import "FixFloat.hpp"
+// [FixFloatTable setup];
 // [MathUtils srand:2000];
-// //        NSMutableString *str = [NSMutableString string];
-// //        double totalFloat = 0;
-// //        for (NSInteger i = 0; i < 5000; i++) {
-// //            NSInteger fand = [MathUtils arc4random];
-// //            double f = fand / 100000000.0f;
-// //            totalFloat += f;
-// //            double cos = cosf(totalFloat);
-// //            double sin = sinf(totalFloat);
-// //            double tan = tanf(totalFloat);
-// //            double atan2 = atan2f(totalFloat + 100, totalFloat - 100);
-// //            
-// //            [str appendFormat:@"f:%@ cos:%@ sin:%@ tan:%@ atan2:%@ \n", [MathUtils convertFloatToString:totalFloat], [MathUtils convertFloatToString:cos], [MathUtils convertFloatToString:sin], [MathUtils convertFloatToString:tan], [MathUtils convertFloatToString:atan2]];
-// //        }
-//
 // NSMutableString *str = [NSMutableString string];
-// double totalFloat = 0;
+// FixFloat totalFloat = FixFloat(0);
 // for (NSInteger i = 0; i < 5000; i++) {
-//     NSInteger fand = [MathUtils arc4random];
-//     double f = fand / 100000000.0f;
+//     int fand = [OLMathUtils arc4random];
+//     FixFloat f = fand / FixFloat(100000000.0);
 //     totalFloat += f;
-//     double cos = [MathUtils cos:totalFloat];
-//     double sin = [MathUtils sin:totalFloat];
-//     double tan = [MathUtils tan:totalFloat];
-//     double atan2 = [MathUtils atan2f:totalFloat + 100 x:totalFloat - 100];
-//
-//     [str appendFormat:@"f:%@ cos:%@ sin:%@ tan:%@ atan2:%@ \n", [MathUtils convertFloatToString:totalFloat], [MathUtils convertFloatToString:cos], [MathUtils convertFloatToString:sin], [MathUtils convertFloatToString:tan], [MathUtils convertFloatToString:atan2]];
+//     FixFloat cos = FixFloat::Cos(totalFloat);
+//     FixFloat sin = FixFloat::Sin(totalFloat);
+//     FixFloat atan2 = FixFloat::Atan2(totalFloat + 100, totalFloat - 100);
+//        
+//     if (i == 160) {
+//         int a = 0;
+//     }
+//             
+// //            [str appendFormat:@"f:%@ cos:%@ sin:%@ atan2:%@ \n", [OLMathUtils convertFloatToString:totalFloat], [OLMathUtils convertFloatToString:cos], [OLMathUtils convertFloatToString:sin], [OLMathUtils convertFloatToString:atan2]];
+//             
+//     [str appendFormat:@"f:%-20lld cos:%-20lld sin:%-20lld atan2:%-20lld  \n", totalFloat.rawValue, cos.rawValue, sin.rawValue, atan2.rawValue];
 // }
+//         
+// NSLog(@"%@", str);
