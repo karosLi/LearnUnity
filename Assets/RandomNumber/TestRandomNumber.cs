@@ -12,7 +12,6 @@ using Random = System.Random;
 public unsafe class TestRandomNumber : MonoBehaviour
 {
     private System.Random _random;
-    private CRandom _cRandom;
     private LibBase.MathLite.FixMath.Random _random1;
     int x = 1000;
     private RandR _randR;// 可用
@@ -25,8 +24,6 @@ public unsafe class TestRandomNumber : MonoBehaviour
     {
         _random = new Random(1000);
         _random1 = new LibBase.MathLite.FixMath.Random(1000);
-        _cRandom = new CRandom();
-        _cRandom.Seed = 1000;
         UnityEngine.Random.InitState(1000);
 
         _randR = new RandR(1000);

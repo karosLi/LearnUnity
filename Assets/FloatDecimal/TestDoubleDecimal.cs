@@ -1,0 +1,222 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Text;
+using FloatDecimal;
+using LibBase.OpenLibm;
+using LibBase.Utils;
+using Unity.Mathematics;
+using UnityEngine;
+
+public class TestDoubleDecimal : MonoBehaviour
+{
+    // Start is called before the first frame update
+    void Start()
+    {
+        Test();
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        
+    }
+
+    void Test()
+    {
+        MathUtils.SRand(2000);
+        
+        StringBuilder str = new StringBuilder();
+        double totalFloat = 0;
+
+        // for (int i = 0; i < 5000; i++)
+        // {
+        //     int fand = OLMathUtils.Arc4Random();
+        //     float f = fand / 100000000.0; // Convert to float by dividing by a large number
+        //     totalFloat += f;
+        //     double cos = OLMathUtils.Cos(totalFloat);
+        //     double sin = OLMathUtils.Sin(totalFloat);
+        //     double tan = OLMathUtils.Tan(totalFloat);
+        //     double atan2 = OLMathUtils.Atan2(totalFloat + 100, totalFloat - 100);
+        //
+        //     // Use string interpolation for formatting
+        //     str.AppendFormat("f:{0,-15} cos:{1,-15} sin:{2,-15} tan:{3,-15} atan2:{4,-15} \n",
+        //         ConvertFloatToString(totalFloat), ConvertFloatToString(cos), ConvertFloatToString(sin), ConvertFloatToString(tan), ConvertFloatToString(atan2));
+        // }
+        
+        // for (int i = 0; i < 5000; i++)
+        // {
+        //     int fand = MathUtils.Arc4Random();
+        //     double f = fand / 100000000.0; // Convert to float by dividing by a large number
+        //     totalFloat += f;
+        //     double cos = Math.Cos(totalFloat);
+        //     double sin = Math.Sin(totalFloat);
+        //     double tan = Math.Tan(totalFloat);
+        //     double atan2 = Math.Atan2(totalFloat + 100, totalFloat - 100);
+        //
+        //     // Use string interpolation for formatting
+        //     str.AppendFormat("f:{0,-15} cos:{1,-15} sin:{2,-15} tan:{3,-15} atan2:{4,-15} \n",
+        //         ConvertFloatToString(totalFloat), ConvertFloatToString(cos), ConvertFloatToString(sin), ConvertFloatToString(tan), ConvertFloatToString(atan2));
+        // }
+        
+        // for (int i = 0; i < 5000; i++)
+        // {
+        //     int fand = MathUtils.Arc4Random();
+        //     double f = fand / 100000000.0; // Convert to float by dividing by a large number
+        //     totalFloat += f;
+        //     double cos = math.cos(totalFloat);
+        //     double sin = math.sin(totalFloat);
+        //     double tan = math.tan(totalFloat);
+        //     double atan2 = math.atan2(totalFloat + 100, totalFloat - 100);
+        //
+        //     // Use string interpolation for formatting
+        //     str.AppendFormat("f:{0,-15} cos:{1,-15} sin:{2,-15} tan:{3,-15} atan2:{4,-15} \n",
+        //         ConvertFloatToString(totalFloat), ConvertFloatToString(cos), ConvertFloatToString(sin), ConvertFloatToString(tan), ConvertFloatToString(atan2));
+        // }
+        
+        for (int i = 0; i < 5000; i++)
+        {
+            int fand = MathUtils.Arc4Random();
+            double f = fand / 100000000.0; // Convert to float by dividing by a large number
+            totalFloat += f;
+            double cos = math.cos(totalFloat);
+            double sin = math.sin(totalFloat);
+            double tan = math.tan(totalFloat);
+            double atan2 = math.atan2(totalFloat + 100, totalFloat - 100);
+        
+            // Use string interpolation for formatting
+            str.AppendFormat("f:{0,-15} cos:{1,-15} sin:{2,-15} tan:{3,-15} atan2:{4,-15} \n",
+                ConvertFloatToString(totalFloat), ConvertFloatToString(cos), ConvertFloatToString(sin), ConvertFloatToString(tan), ConvertFloatToString(atan2));
+        }
+        
+        for (int i = 0; i < 5000; i++)
+        {
+            int fand = MathUtils.Arc4Random();
+            double f = fand / 100000000.0; // Convert to float by dividing by a large number
+            totalFloat += f;
+            totalFloat = 1710.5153815999997;
+            double cos = OpenLibmInterop.cos(totalFloat);
+            double sin = OpenLibmInterop.sin(totalFloat);
+            double tan = OpenLibmInterop.tan(totalFloat);
+            double atan2 = OpenLibmInterop.atan2(totalFloat + 100, totalFloat - 100);
+        
+            if (i == 160)
+            {
+                int a = 0;
+            }
+            // Use string interpolation for formatting
+            str.AppendFormat("f:{0,-15} cos:{1,-15} sin:{2,-15} tan:{3,-15} atan2:{4,-15} \n",
+                ConvertFloatToString(totalFloat), ConvertFloatToString(cos), ConvertFloatToString(sin), ConvertFloatToString(tan), ConvertFloatToString(atan2));
+        }
+        
+        FixFloat totalFixFloat = 0;
+        for (int i = 0; i < 5000; i++)
+        {
+            int fand = MathUtils.Arc4Random();
+            FixFloat f = fand / 100000000.0; // Convert to float by dividing by a large number
+            totalFixFloat += f;
+            FixFloat cos = math.cos(totalFixFloat.AsDouble());
+            FixFloat sin = math.sin(totalFixFloat.AsDouble());
+            FixFloat tan = math.tan(totalFixFloat.AsDouble());
+            FixFloat atan2 = math.atan2(totalFixFloat.AsDouble() + 100, totalFixFloat.AsDouble() - 100);
+        
+            if (i == 160)
+            {
+                int a = 0;
+            }
+            
+            // Use string interpolation for formatting
+            str.AppendFormat("f:{0,-15} cos:{1,-15} sin:{2,-15} tan:{3,-15} atan2:{4,-15} \n",
+                ConvertFloatToString(totalFixFloat), ConvertFloatToString(cos), ConvertFloatToString(sin), ConvertFloatToString(tan), ConvertFloatToString(atan2));
+        }
+
+        Debug.Log(str.ToString());
+    }
+    
+    public static string ConvertFloatToString(double value, int decimalPlaces = 4)
+    {
+        // 检查是否为负数，并且处理为正数以简化计算
+        bool isNegative = value < 0;
+        if (isNegative)
+        {
+            value = -value; // 转为正数处理
+        }
+
+        // 提取整数部分
+        int integralPart = (int)value;
+        // 提取小数部分
+        double fractionalPart = value - integralPart;
+        // 构建结果字符串，包括处理负号
+        string result = (isNegative ? "-" : "") + integralPart.ToString() + ".";
+
+        // 处理小数部分
+        for (int i = 0; i < decimalPlaces; i++)
+        {
+            fractionalPart *= 10;
+            int digit = (int)fractionalPart;
+            result += digit.ToString();
+            fractionalPart -= digit;
+        }
+
+        return result;
+    }
+    
+    
+    public static string ConvertFloatToString(FixFloat value, int decimalPlaces = 4)
+    {
+        // 检查是否为负数，并且处理为正数以简化计算
+        bool isNegative = value < 0;
+        if (isNegative)
+        {
+            value = -value; // 转为正数处理
+        }
+
+        // 提取整数部分
+        int integralPart = (int)value;
+        // 提取小数部分
+        FixFloat fractionalPart = value - integralPart;
+        // 构建结果字符串，包括处理负号
+        string result = (isNegative ? "-" : "") + integralPart.ToString() + ".";
+
+        // 处理小数部分
+        for (int i = 0; i < decimalPlaces; i++)
+        {
+            fractionalPart *= 10;
+            int digit = (int)fractionalPart;
+            result += digit.ToString();
+            fractionalPart -= digit;
+        }
+
+        return result;
+    }
+}
+
+// iOS 测试代码
+// [MathUtils srand:2000];
+// //        NSMutableString *str = [NSMutableString string];
+// //        double totalFloat = 0;
+// //        for (NSInteger i = 0; i < 5000; i++) {
+// //            NSInteger fand = [MathUtils arc4random];
+// //            double f = fand / 100000000.0f;
+// //            totalFloat += f;
+// //            double cos = cosf(totalFloat);
+// //            double sin = sinf(totalFloat);
+// //            double tan = tanf(totalFloat);
+// //            double atan2 = atan2f(totalFloat + 100, totalFloat - 100);
+// //            
+// //            [str appendFormat:@"f:%@ cos:%@ sin:%@ tan:%@ atan2:%@ \n", [MathUtils convertFloatToString:totalFloat], [MathUtils convertFloatToString:cos], [MathUtils convertFloatToString:sin], [MathUtils convertFloatToString:tan], [MathUtils convertFloatToString:atan2]];
+// //        }
+//
+// NSMutableString *str = [NSMutableString string];
+// double totalFloat = 0;
+// for (NSInteger i = 0; i < 5000; i++) {
+//     NSInteger fand = [MathUtils arc4random];
+//     double f = fand / 100000000.0f;
+//     totalFloat += f;
+//     double cos = [MathUtils cos:totalFloat];
+//     double sin = [MathUtils sin:totalFloat];
+//     double tan = [MathUtils tan:totalFloat];
+//     double atan2 = [MathUtils atan2f:totalFloat + 100 x:totalFloat - 100];
+//
+//     [str appendFormat:@"f:%@ cos:%@ sin:%@ tan:%@ atan2:%@ \n", [MathUtils convertFloatToString:totalFloat], [MathUtils convertFloatToString:cos], [MathUtils convertFloatToString:sin], [MathUtils convertFloatToString:tan], [MathUtils convertFloatToString:atan2]];
+// }
