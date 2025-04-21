@@ -2,7 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
-using FloatDecimal;
+using LibBase.MathLite.FixMath;
 using LibBase.OpenLibm;
 using LibBase.Utils;
 using Unity.Mathematics;
@@ -74,51 +74,49 @@ public class TestDoubleDecimal : MonoBehaviour
         //         ConvertFloatToString(totalFloat), ConvertFloatToString(cos), ConvertFloatToString(sin), ConvertFloatToString(tan), ConvertFloatToString(atan2));
         // }
         
-        for (int i = 0; i < 5000; i++)
-        {
-            int fand = MathUtils.Arc4Random();
-            double f = fand / 100000000.0; // Convert to float by dividing by a large number
-            totalFloat += f;
-            double cos = math.cos(totalFloat);
-            double sin = math.sin(totalFloat);
-            double tan = math.tan(totalFloat);
-            double atan2 = math.atan2(totalFloat + 100, totalFloat - 100);
+        // for (int i = 0; i < 5000; i++)
+        // {
+        //     int fand = MathUtils.Arc4Random();
+        //     double f = fand / 100000000.0; // Convert to float by dividing by a large number
+        //     totalFloat += f;
+        //     double cos = math.cos(totalFloat);
+        //     double sin = math.sin(totalFloat);
+        //     double tan = math.tan(totalFloat);
+        //     double atan2 = math.atan2(totalFloat + 100, totalFloat - 100);
+        //
+        //     // Use string interpolation for formatting
+        //     str.AppendFormat("f:{0,-15} cos:{1,-15} sin:{2,-15} tan:{3,-15} atan2:{4,-15} \n",
+        //         ConvertFloatToString(totalFloat), ConvertFloatToString(cos), ConvertFloatToString(sin), ConvertFloatToString(tan), ConvertFloatToString(atan2));
+        // }
         
-            // Use string interpolation for formatting
-            str.AppendFormat("f:{0,-15} cos:{1,-15} sin:{2,-15} tan:{3,-15} atan2:{4,-15} \n",
-                ConvertFloatToString(totalFloat), ConvertFloatToString(cos), ConvertFloatToString(sin), ConvertFloatToString(tan), ConvertFloatToString(atan2));
-        }
-        
-        for (int i = 0; i < 5000; i++)
-        {
-            int fand = MathUtils.Arc4Random();
-            double f = fand / 100000000.0; // Convert to float by dividing by a large number
-            totalFloat += f;
-            totalFloat = 1710.5153815999997;
-            double cos = OpenLibmInterop.cos(totalFloat);
-            double sin = OpenLibmInterop.sin(totalFloat);
-            double tan = OpenLibmInterop.tan(totalFloat);
-            double atan2 = OpenLibmInterop.atan2(totalFloat + 100, totalFloat - 100);
-        
-            if (i == 160)
-            {
-                int a = 0;
-            }
-            // Use string interpolation for formatting
-            str.AppendFormat("f:{0,-15} cos:{1,-15} sin:{2,-15} tan:{3,-15} atan2:{4,-15} \n",
-                ConvertFloatToString(totalFloat), ConvertFloatToString(cos), ConvertFloatToString(sin), ConvertFloatToString(tan), ConvertFloatToString(atan2));
-        }
-        
+        // for (int i = 0; i < 5000; i++)
+        // {
+        //     int fand = MathUtils.Arc4Random();
+        //     double f = fand / 100000000.0; // Convert to float by dividing by a large number
+        //     totalFloat += f;
+        //     double cos = OpenLibmInterop.cos(totalFloat);
+        //     double sin = OpenLibmInterop.sin(totalFloat);
+        //     double tan = OpenLibmInterop.tan(totalFloat);
+        //     double atan2 = OpenLibmInterop.atan2(totalFloat + 100, totalFloat - 100);
+        //
+        //     if (i == 160)
+        //     {
+        //         int a = 0;
+        //     }
+        //     // Use string interpolation for formatting
+        //     str.AppendFormat("f:{0,-15} cos:{1,-15} sin:{2,-15} tan:{3,-15} atan2:{4,-15} \n",
+        //         ConvertFloatToString(totalFloat), ConvertFloatToString(cos), ConvertFloatToString(sin), ConvertFloatToString(tan), ConvertFloatToString(atan2));
+        // }
+        //
         FixFloat totalFixFloat = 0;
         for (int i = 0; i < 5000; i++)
         {
             int fand = MathUtils.Arc4Random();
-            FixFloat f = fand / 100000000.0; // Convert to float by dividing by a large number
+            FixFloat f = fand / new FixFloat(100000000.0); // Convert to float by dividing by a large number
             totalFixFloat += f;
-            FixFloat cos = math.cos(totalFixFloat.AsDouble());
-            FixFloat sin = math.sin(totalFixFloat.AsDouble());
-            FixFloat tan = math.tan(totalFixFloat.AsDouble());
-            FixFloat atan2 = math.atan2(totalFixFloat.AsDouble() + 100, totalFixFloat.AsDouble() - 100);
+            FixFloat cos = FixFloat.Cos(totalFixFloat);
+            FixFloat sin = FixFloat.Sin(totalFixFloat);
+            FixFloat atan2 = FixFloat.Atan2(totalFixFloat + 100, totalFixFloat - 100);
         
             if (i == 160)
             {
@@ -126,8 +124,8 @@ public class TestDoubleDecimal : MonoBehaviour
             }
             
             // Use string interpolation for formatting
-            str.AppendFormat("f:{0,-15} cos:{1,-15} sin:{2,-15} tan:{3,-15} atan2:{4,-15} \n",
-                ConvertFloatToString(totalFixFloat), ConvertFloatToString(cos), ConvertFloatToString(sin), ConvertFloatToString(tan), ConvertFloatToString(atan2));
+            str.AppendFormat("f:{0,-15} cos:{1,-15} sin:{2,-15} atan2:{3,-15} \n",
+                ConvertFloatToString(totalFixFloat), ConvertFloatToString(cos), ConvertFloatToString(sin), ConvertFloatToString(atan2));
         }
 
         Debug.Log(str.ToString());
