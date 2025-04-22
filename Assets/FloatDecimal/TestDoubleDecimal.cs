@@ -120,7 +120,7 @@ public class TestDoubleDecimal : MonoBehaviour
             FixFloat sin = FixFloat.Sin(totalFixFloat);
             FixFloat atan2 = FixFloat.Atan2(totalFixFloat + 100, totalFixFloat - 100);
         
-            if (i == 160)
+            if (i == 4999)
             {
                 int a = 0;
             }
