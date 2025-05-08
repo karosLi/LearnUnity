@@ -421,6 +421,12 @@ FixFloat FixFloat::Sin(const FixFloat& value) {
     return isOverZero ? _sinTable[angleInt] : -_sinTable[angleInt];
 }
 
+// 传入弧度，计算正弦值
+FixFloat FixFloat::SinRad(const FixFloat& radians) {
+    FixFloat degrees = radians * Rad2Deg;  // 先转换为角度
+    return Sin(degrees);
+}
+
 FixFloat FixFloat::FastSin(const FixFloat& value) {
     return Zero; // 暂时返回零，可以根据需要实现
 }
@@ -479,6 +485,12 @@ FixFloat FixFloat::Cos(const FixFloat& value) {
     
     angleInt = 180 * 100 - angleInt;
     return -_cosTable[angleInt];
+}
+
+// 传入弧度，计算余弦值
+FixFloat FixFloat::CosRad(const FixFloat& radians) {
+    FixFloat degrees = radians * Rad2Deg;  // 先转换为角度
+    return Cos(degrees);
 }
 
 FixFloat FixFloat::FastCos(const FixFloat& value) {
@@ -590,6 +602,16 @@ FixFloat FixFloat::Acos(const FixFloat& x) {
     
     FixFloat result = Atan(Sqrt(One - x * x) / x);
     return x.rawValue < 0 ? result + Pi : result;
+}
+
+// 角度转弧度
+FixFloat FixFloat::Degree2Rad(const FixFloat& degrees) {
+    return degrees * Deg2Rad;
+}
+
+// 弧度转角度
+FixFloat FixFloat::Rad2Degree(const FixFloat& radians) {
+    return radians * Rad2Deg;
 }
 
 // 实用函数
@@ -765,12 +787,12 @@ FixFloat FixFloat::operator-(int other) const {
 
 FixFloat FixFloat::operator*(int other) const {
     // 对于整数乘法，我们可以优化性能
-    return FixFloat(rawValue * other);
+    return FixFloat(rawValue) * FixFloat(other);
 }
 
 FixFloat FixFloat::operator/(int other) const {
     // 对于整数除法，我们可以优化性能
-    return FixFloat(rawValue / other);
+    return FixFloat(rawValue) / FixFloat(other);
 }
 
 FixFloat FixFloat::operator%(int other) const {
@@ -778,27 +800,27 @@ FixFloat FixFloat::operator%(int other) const {
 }
 
 FixFloat& FixFloat::operator+=(int other) {
-    *this = *this + other;
+    *this = *this + FixFloat(other);
     return *this;
 }
 
 FixFloat& FixFloat::operator-=(int other) {
-    *this = *this - other;
+    *this = *this - FixFloat(other);
     return *this;
 }
 
 FixFloat& FixFloat::operator*=(int other) {
-    *this = *this * other;
+    *this = *this * FixFloat(other);
     return *this;
 }
 
 FixFloat& FixFloat::operator/=(int other) {
-    *this = *this / other;
+    *this = *this / FixFloat(other);
     return *this;
 }
 
 FixFloat& FixFloat::operator%=(int other) {
-    *this = *this % other;
+    *this = *this % FixFloat(other);
     return *this;
 }
 
@@ -845,22 +867,22 @@ FixFloat FixFloat::operator/(float other) const {
 }
 
 FixFloat& FixFloat::operator+=(float other) {
-    *this = *this + other;
+    *this = *this + FixFloat(other);
     return *this;
 }
 
 FixFloat& FixFloat::operator-=(float other) {
-    *this = *this - other;
+    *this = *this - FixFloat(other);
     return *this;
 }
 
 FixFloat& FixFloat::operator*=(float other) {
-    *this = *this * other;
+    *this = *this * FixFloat(other);
     return *this;
 }
 
 FixFloat& FixFloat::operator/=(float other) {
-    *this = *this / other;
+    *this = *this / FixFloat(other);
     return *this;
 }
 
@@ -907,22 +929,22 @@ FixFloat FixFloat::operator/(double other) const {
 }
 
 FixFloat& FixFloat::operator+=(double other) {
-    *this = *this + other;
+    *this = *this + FixFloat(other);
     return *this;
 }
 
 FixFloat& FixFloat::operator-=(double other) {
-    *this = *this - other;
+    *this = *this - FixFloat(other);
     return *this;
 }
 
 FixFloat& FixFloat::operator*=(double other) {
-    *this = *this * other;
+    *this = *this * FixFloat(other);
     return *this;
 }
 
 FixFloat& FixFloat::operator/=(double other) {
-    *this = *this / other;
+    *this = *this / FixFloat(other);
     return *this;
 }
 
@@ -1136,3 +1158,4 @@ const char* FixFloat::ToString() const {
     printf(buffer, "%f", AsFloat());
     return buffer;
 }
+
